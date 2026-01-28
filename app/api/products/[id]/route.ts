@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withBugStack } from '@/lib/bugstack';
+import { withErrorCapture } from '@bugstack/error-capture-sdk';
+import '@/lib/bugstack'; // ensures client is initialized
 import { db, inventoryService } from '@/lib/db';
 
 // GET /api/products/[id] - Fetch a single product with inventory status
-export const GET = withBugStack(async (request: NextRequest, { params }: { params: { id: string } }) => {
+export const GET = withErrorCapture(async (request: NextRequest, { params }: { params: { id: string } }) => {
   const searchParams = request.nextUrl.searchParams;
   const includeInventory = searchParams.get('inventory') === 'true';
 
@@ -58,7 +59,7 @@ export const GET = withBugStack(async (request: NextRequest, { params }: { param
 });
 
 // PATCH /api/products/[id] - Update product details
-export const PATCH = withBugStack(async (request: NextRequest, { params }: { params: { id: string } }) => {
+export const PATCH = withErrorCapture(async (request: NextRequest, { params }: { params: { id: string } }) => {
   const body = await request.json();
   const productId = parseInt(params.id);
 

@@ -171,4 +171,53 @@ npm run lint
 
 ## License
 
+
+BugStack SDK — Quick Start
+1. Install
+
+npm install @bugstack/error-capture-sdk
+
+2. Add environment variables
+Create or update .env.local in your project root:
+
+
+BUGSTACK_API_KEY=your-api-key-here
+BUGSTACK_ENDPOINT=https://bugstack-error-service.onrender.com/api/capture
+
+3. Initialize the client
+Create lib/bugstack.ts:
+
+
+import { ErrorCaptureClient } from "@bugstack/error-capture-sdk";
+
+ErrorCaptureClient.init({
+  apiKey: process.env.BUGSTACK_API_KEY!,
+  projectId: "bugboy",
+  endpoint: process.env.BUGSTACK_ENDPOINT,
+});
+
+4. Wrap your API routes
+In any Next.js App Router API route (e.g. app/api/example/route.ts):
+
+
+import { NextResponse } from "next/server";
+import { withErrorCapture } from "@bugstack/error-capture-sdk";
+import "@/lib/bugstack"; // ensures client is initialized
+
+export const GET = withErrorCapture(async (request) => {
+  // Your existing handler code here.
+  // Any thrown error will be automatically captured and sent to BugStack.
+  const data = await fetchSomething();
+  return NextResponse.json({ data });
+});
+
+5. Test it
+To verify the integration, you can temporarily throw an error in a wrapped route:
+
+
+export const GET = withErrorCapture(async (request) => {
+  throw new Error("Test bug for BugStack!");
+});
+Then hit that endpoint (e.g. curl http://localhost:3000/api/example). The error should appear in your BugStack dashboard.
+
 MIT - This is a demo application for testing BugStack.

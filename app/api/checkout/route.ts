@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withBugStack } from '@/lib/bugstack';
+import { withErrorCapture } from '@bugstack/error-capture-sdk';
+import '@/lib/bugstack'; // ensures client is initialized
 import { db, paymentService, inventoryService } from '@/lib/db';
 
 interface CheckoutItem {
@@ -20,7 +21,7 @@ interface CheckoutRequest {
 }
 
 // POST /api/checkout - Process a checkout order
-export const POST = withBugStack(async (request: NextRequest) => {
+export const POST = withErrorCapture(async (request: NextRequest) => {
   const body: CheckoutRequest = await request.json();
 
   // Validate required fields
