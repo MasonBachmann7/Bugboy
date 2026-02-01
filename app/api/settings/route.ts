@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withBugStack } from '@bugstack/error-capture-sdk';
+import '@/lib/bugstack';
 import { db } from '@/lib/db';
 
 interface UserSettings {
@@ -67,7 +69,7 @@ const defaultSettings: Omit<UserSettings, 'userId' | 'updatedAt'> = {
 };
 
 // GET /api/settings - Fetch user settings
-export const GET = async (request: NextRequest) => {
+export const GET = withBugStack(async (request: NextRequest) => {
   const searchParams = request.nextUrl.searchParams;
   const userId = searchParams.get('userId');
   const section = searchParams.get('section'); // notifications, privacy, preferences, or null for all
@@ -124,10 +126,10 @@ export const GET = async (request: NextRequest) => {
     success: true,
     data: settings,
   });
-};
+});
 
 // PUT /api/settings - Replace all settings
-export const PUT = async (request: NextRequest) => {
+export const PUT = withBugStack(async (request: NextRequest) => {
   const body = await request.json();
   const { userId, settings: newSettings } = body;
 
@@ -165,10 +167,10 @@ export const PUT = async (request: NextRequest) => {
     success: true,
     data: settings,
   });
-};
+});
 
 // PATCH /api/settings - Partial settings update
-export const PATCH = async (request: NextRequest) => {
+export const PATCH = withBugStack(async (request: NextRequest) => {
   const body = await request.json();
   const { userId, ...updates } = body;
 
@@ -230,10 +232,10 @@ export const PATCH = async (request: NextRequest) => {
     success: true,
     data: updatedSettings,
   });
-};
+});
 
 // DELETE /api/settings - Reset settings to defaults
-export const DELETE = async (request: NextRequest) => {
+export const DELETE = withBugStack(async (request: NextRequest) => {
   const searchParams = request.nextUrl.searchParams;
   const userId = searchParams.get('userId');
   const section = searchParams.get('section');
@@ -294,4 +296,4 @@ export const DELETE = async (request: NextRequest) => {
     data: resetSettings,
     message: 'All settings reset to defaults',
   });
-};
+});

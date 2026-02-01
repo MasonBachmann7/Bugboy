@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withBugStack } from '@bugstack/error-capture-sdk';
+import '@/lib/bugstack';
 import { db } from '@/lib/db';
 
 interface LoginAttempt {
@@ -31,7 +33,7 @@ const passwordStore: Record<string, string> = {
 };
 
 // POST /api/auth/login - Authenticate user
-export const POST = async (request: NextRequest) => {
+export const POST = withBugStack(async (request: NextRequest) => {
   const body = await request.json();
   const { email, password, rememberMe } = body;
 
@@ -138,10 +140,10 @@ export const POST = async (request: NextRequest) => {
       },
     },
   });
-};
+});
 
 // DELETE /api/auth/login - Logout (end session)
-export const DELETE = async (request: NextRequest) => {
+export const DELETE = withBugStack(async (request: NextRequest) => {
   const authHeader = request.headers.get('authorization');
 
   if (!authHeader) {
@@ -181,10 +183,10 @@ export const DELETE = async (request: NextRequest) => {
     success: true,
     message: 'Logged out successfully',
   });
-};
+});
 
 // GET /api/auth/login - Check session status
-export const GET = async (request: NextRequest) => {
+export const GET = withBugStack(async (request: NextRequest) => {
   const authHeader = request.headers.get('authorization');
 
   if (!authHeader) {
@@ -223,4 +225,4 @@ export const GET = async (request: NextRequest) => {
       },
     },
   });
-};
+});

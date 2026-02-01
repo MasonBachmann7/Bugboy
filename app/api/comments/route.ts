@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withBugStack } from '@bugstack/error-capture-sdk';
+import '@/lib/bugstack';
 import { db } from '@/lib/db';
 
 interface Comment {
@@ -43,7 +45,7 @@ const commentsStore: Comment[] = [
 ];
 
 // GET /api/comments - Fetch comments for an entity
-export const GET = async (request: NextRequest) => {
+export const GET = withBugStack(async (request: NextRequest) => {
   const searchParams = request.nextUrl.searchParams;
   const entityType = searchParams.get('entityType');
   const entityId = searchParams.get('entityId');
@@ -103,7 +105,7 @@ export const GET = async (request: NextRequest) => {
       entityId: parsedEntityId,
     },
   });
-};
+});
 
 // Helper to build reply tree
 function buildReplyTree(parentId: string): Comment[] {
@@ -117,7 +119,7 @@ function buildReplyTree(parentId: string): Comment[] {
 }
 
 // POST /api/comments - Create new comment
-export const POST = async (request: NextRequest) => {
+export const POST = withBugStack(async (request: NextRequest) => {
   const body = await request.json();
   const { entityType, entityId, authorId, content, parentId } = body;
 
@@ -181,10 +183,10 @@ export const POST = async (request: NextRequest) => {
     success: true,
     data: comment,
   });
-};
+});
 
 // PATCH /api/comments - Update or like a comment
-export const PATCH = async (request: NextRequest) => {
+export const PATCH = withBugStack(async (request: NextRequest) => {
   const body = await request.json();
   const { commentId, action, content, userId } = body;
 
@@ -236,10 +238,10 @@ export const PATCH = async (request: NextRequest) => {
     { success: false, error: 'Invalid action' },
     { status: 400 }
   );
-};
+});
 
 // DELETE /api/comments - Delete a comment
-export const DELETE = async (request: NextRequest) => {
+export const DELETE = withBugStack(async (request: NextRequest) => {
   const searchParams = request.nextUrl.searchParams;
   const commentId = searchParams.get('id');
   const userId = searchParams.get('userId');
@@ -276,4 +278,4 @@ export const DELETE = async (request: NextRequest) => {
     success: true,
     message: 'Comment deleted',
   });
-};
+});

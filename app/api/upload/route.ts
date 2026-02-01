@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withBugStack } from '@bugstack/error-capture-sdk';
+import '@/lib/bugstack';
 
 interface UploadedFile {
   id: string;
@@ -18,7 +20,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const uploadedFiles: UploadedFile[] = [];
 
 // POST /api/upload - Handle file upload
-export const POST = async (request: NextRequest) => {
+export const POST = withBugStack(async (request: NextRequest) => {
   const contentType = request.headers.get('content-type');
 
   // Check if it's a multipart form
@@ -110,10 +112,10 @@ export const POST = async (request: NextRequest) => {
       { status: 500 }
     );
   }
-};
+});
 
 // GET /api/upload - List uploaded files
-export const GET = async (request: NextRequest) => {
+export const GET = withBugStack(async (request: NextRequest) => {
   const searchParams = request.nextUrl.searchParams;
   const userId = searchParams.get('userId');
   const mimeType = searchParams.get('type');
@@ -147,10 +149,10 @@ export const GET = async (request: NextRequest) => {
       totalSizeFormatted: `${(totalSize / 1024 / 1024).toFixed(2)}MB`,
     },
   });
-};
+});
 
 // DELETE /api/upload - Delete a file
-export const DELETE = async (request: NextRequest) => {
+export const DELETE = withBugStack(async (request: NextRequest) => {
   const searchParams = request.nextUrl.searchParams;
   const fileId = searchParams.get('id');
 
@@ -179,4 +181,4 @@ export const DELETE = async (request: NextRequest) => {
     success: true,
     data: { deleted: deleted[0] },
   });
-};
+});

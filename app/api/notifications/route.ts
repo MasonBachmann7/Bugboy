@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withBugStack } from '@bugstack/error-capture-sdk';
+import '@/lib/bugstack';
 import { db } from '@/lib/db';
 
 interface Notification {
@@ -47,7 +49,7 @@ const notificationsStore: Notification[] = [
 ];
 
 // GET /api/notifications - Fetch user notifications
-export const GET = async (request: NextRequest) => {
+export const GET = withBugStack(async (request: NextRequest) => {
   const searchParams = request.nextUrl.searchParams;
   const userId = searchParams.get('userId');
   const unreadOnly = searchParams.get('unread') === 'true';
@@ -108,10 +110,10 @@ export const GET = async (request: NextRequest) => {
     },
     timestamp: new Date().toISOString(),
   });
-};
+});
 
 // POST /api/notifications - Create new notification
-export const POST = async (request: NextRequest) => {
+export const POST = withBugStack(async (request: NextRequest) => {
   const body = await request.json();
 
   const { userId, type, title, message, expiresIn } = body;
@@ -151,10 +153,10 @@ export const POST = async (request: NextRequest) => {
     success: true,
     data: { notificationId: notification.id },
   });
-};
+});
 
 // PATCH /api/notifications - Mark notifications as read
-export const PATCH = async (request: NextRequest) => {
+export const PATCH = withBugStack(async (request: NextRequest) => {
   const body = await request.json();
   const { notificationIds, markAllRead, userId } = body;
 
@@ -196,4 +198,4 @@ export const PATCH = async (request: NextRequest) => {
     success: true,
     data: { updated },
   });
-};
+});

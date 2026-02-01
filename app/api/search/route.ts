@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withBugStack } from '@bugstack/error-capture-sdk';
+import '@/lib/bugstack';
 import { db } from '@/lib/db';
 
 interface SearchResult {
@@ -10,7 +12,7 @@ interface SearchResult {
 }
 
 // GET /api/search - Full-text search across users and products
-export const GET = async (request: NextRequest) => {
+export const GET = withBugStack(async (request: NextRequest) => {
   const searchParams = request.nextUrl.searchParams;
   const query = searchParams.get('q');
   const type = searchParams.get('type'); // 'user', 'product', or null for all
@@ -99,4 +101,4 @@ export const GET = async (request: NextRequest) => {
     },
     timestamp: new Date().toISOString(),
   });
-};
+});

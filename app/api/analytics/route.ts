@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withBugStack } from '@bugstack/error-capture-sdk';
+import '@/lib/bugstack';
 import { db } from '@/lib/db';
 
 interface AnalyticsData {
@@ -24,7 +26,7 @@ const historicalData = {
 };
 
 // GET /api/analytics - Fetch analytics metrics
-export const GET = async (request: NextRequest) => {
+export const GET = withBugStack(async (request: NextRequest) => {
   const searchParams = request.nextUrl.searchParams;
   const period = searchParams.get('period') || 'current';
   const includeComparison = searchParams.get('compare') === 'true';
@@ -87,10 +89,10 @@ export const GET = async (request: NextRequest) => {
     data: analytics,
     generatedAt: new Date().toISOString(),
   });
-};
+});
 
 // POST /api/analytics - Track custom event
-export const POST = async (request: NextRequest) => {
+export const POST = withBugStack(async (request: NextRequest) => {
   const body = await request.json();
 
   const { eventName, properties, userId } = body;
@@ -119,4 +121,4 @@ export const POST = async (request: NextRequest) => {
     success: true,
     data: { eventId: eventPayload.id },
   });
-};
+});

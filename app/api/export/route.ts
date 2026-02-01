@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withBugStack } from '@bugstack/error-capture-sdk';
+import '@/lib/bugstack';
 import { db } from '@/lib/db';
 
 type ExportFormat = 'json' | 'csv' | 'xml';
@@ -20,7 +22,7 @@ interface ExportJob {
 const exportJobs: Map<string, ExportJob> = new Map();
 
 // POST /api/export - Create export job
-export const POST = async (request: NextRequest) => {
+export const POST = withBugStack(async (request: NextRequest) => {
   const body = await request.json();
   const { entity, format, filters, userId } = body;
 
@@ -73,7 +75,7 @@ export const POST = async (request: NextRequest) => {
       message: 'Export job created. Poll GET /api/export?jobId=... for status.',
     },
   });
-};
+});
 
 // Async export processor
 async function processExport(
@@ -186,7 +188,7 @@ function convertToXML(data: unknown[], entityName: string): string {
 }
 
 // GET /api/export - Check export job status
-export const GET = async (request: NextRequest) => {
+export const GET = withBugStack(async (request: NextRequest) => {
   const searchParams = request.nextUrl.searchParams;
   const jobId = searchParams.get('jobId');
 
@@ -215,10 +217,10 @@ export const GET = async (request: NextRequest) => {
     success: true,
     data: job,
   });
-};
+});
 
 // DELETE /api/export - Cancel export job
-export const DELETE = async (request: NextRequest) => {
+export const DELETE = withBugStack(async (request: NextRequest) => {
   const searchParams = request.nextUrl.searchParams;
   const jobId = searchParams.get('jobId');
 
@@ -252,4 +254,4 @@ export const DELETE = async (request: NextRequest) => {
     success: true,
     message: 'Export job cancelled',
   });
-};
+});

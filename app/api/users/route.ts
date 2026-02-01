@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
+import { withBugStack } from '@bugstack/error-capture-sdk';
+import '@/lib/bugstack';
 import { db, User } from '@/lib/db';
 
 // GET /api/users - Fetch all users with optional role filter
-export const GET = async (request: Request) => {
+export const GET = withBugStack(async (request: Request) => {
   const url = new URL(request.url);
   const role = url.searchParams.get('role') as User['role'] | null;
 
@@ -34,4 +36,4 @@ export const GET = async (request: Request) => {
       timestamp: new Date().toISOString(),
     },
   });
-};
+});
