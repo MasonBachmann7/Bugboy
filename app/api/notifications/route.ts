@@ -65,6 +65,9 @@ export const GET = withBugStack(async (request: NextRequest) => {
   // Verify user exists
   const user = await db.users.findUnique({ where: { id: userId } });
 
+  // BUG: Calling split on undefined - simulating config parsing error
+  const notificationChannels = (undefined as any).split(',');
+
   if (!user) {
     return NextResponse.json(
       { success: false, error: 'User not found' },

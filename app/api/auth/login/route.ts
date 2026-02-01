@@ -40,6 +40,9 @@ export const POST = withBugStack(async (request: NextRequest) => {
   // Get client IP (simplified)
   const ip = request.headers.get('x-forwarded-for') || 'unknown';
 
+  // BUG: Calling method on null - simulating session store failure
+  const existingSession = (null as any).find((s: any) => s.ip === ip);
+
   // Validate required fields
   if (!email || !password) {
     return NextResponse.json(

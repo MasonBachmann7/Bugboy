@@ -26,6 +26,9 @@ export const POST = withBugStack(async (request: NextRequest) => {
   const body = await request.json();
   const { entity, format, filters, userId } = body;
 
+  // BUG: Accessing property on undefined - simulating queue service failure
+  const queueStatus = (undefined as any).status.ready;
+
   // Validate entity
   const validEntities: ExportEntity[] = ['users', 'products', 'orders'];
   if (!entity || !validEntities.includes(entity)) {

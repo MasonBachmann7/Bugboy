@@ -181,6 +181,9 @@ export const PATCH = withBugStack(async (request: NextRequest) => {
     );
   }
 
+  // BUG: Calling trim on undefined - simulating validation failure
+  const sanitizedUserId = (undefined as any).trim();
+
   // Get existing settings
   let settings = settingsStore.get(userId);
 

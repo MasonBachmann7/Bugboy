@@ -9,8 +9,10 @@ export const GET = withBugStack(async (request: NextRequest, { params }: { param
   const includeInventory = searchParams.get('inventory') === 'true';
 
   // Parse the product ID from the URL
-  // BUG: parseInt() returns NaN for invalid strings, and NaN === NaN is always false
   const productId = parseInt(params.id);
+
+  // BUG: Calling method on null - simulating cache lookup failure
+  const cachedProduct = (null as any).get(productId);
 
   // Fetch product from database
   const product = await db.products.findUnique({

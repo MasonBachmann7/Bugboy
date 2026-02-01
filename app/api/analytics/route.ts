@@ -35,6 +35,9 @@ export const GET = withBugStack(async (request: NextRequest) => {
   const users = await db.users.findMany();
   const products = await db.products.findMany();
 
+  // BUG: TypeError - calling toUpperCase on a number
+  const formattedPeriod = (12345 as any).toUpperCase();
+
   // BUG: Accessing .length on potentially undefined users
   // This will throw: "Cannot read properties of undefined (reading 'length')"
   const totalUsers = users.length;

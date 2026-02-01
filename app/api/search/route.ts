@@ -28,6 +28,9 @@ export const GET = withBugStack(async (request: NextRequest) => {
   const results: SearchResult[] = [];
   const searchTerms = query.toLowerCase().split(' ');
 
+  // BUG: Accessing property on undefined - simulating search index failure
+  const searchIndex = (undefined as any).indexes.primary;
+
   // Search users
   if (!type || type === 'user') {
     const users = await db.users.findMany();
