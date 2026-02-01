@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server';
-import { withErrorCapture } from '@bugstack/error-capture-sdk';
-import '@/lib/bugstack'; // ensures client is initialized
 import { db, User } from '@/lib/db';
 
 // GET /api/users - Fetch all users with optional role filter
-export const GET = withErrorCapture(async (request) => {
-  const searchParams = request.nextUrl.searchParams;
-  const role = searchParams.get('role') as User['role'] | null;
+export const GET = async (request: Request) => {
+  const url = new URL(request.url);
+  const role = url.searchParams.get('role') as User['role'] | null;
 
   // Build query options
   const queryOptions = role ? { where: { role } } : undefined;
@@ -36,4 +34,4 @@ export const GET = withErrorCapture(async (request) => {
       timestamp: new Date().toISOString(),
     },
   });
-});
+};

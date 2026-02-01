@@ -15,7 +15,7 @@ interface EndpointConfig {
   name: string;
   description: string;
   endpoint: string;
-  method: 'GET' | 'POST' | 'PATCH';
+  method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   body?: object;
   expectedBug: string;
 }
@@ -27,7 +27,7 @@ const endpoints: EndpointConfig[] = [
     description: 'Fetches all users with role-based filtering and activity status',
     endpoint: '/api/users',
     method: 'GET',
-    expectedBug: 'TypeError: Cannot read properties of undefined (reading \'map\')',
+    expectedBug: 'TypeError: Cannot read properties of undefined (reading \'map\') - db returns undefined on connection issues',
   },
   {
     id: 'product',
@@ -35,7 +35,7 @@ const endpoints: EndpointConfig[] = [
     description: 'Retrieves product details by ID with optional inventory status',
     endpoint: '/api/products/1001?inventory=true',
     method: 'GET',
-    expectedBug: 'NaN comparison causing unexpected 404 responses',
+    expectedBug: 'NaN comparison causing unexpected 404 responses for invalid IDs',
   },
   {
     id: 'checkout',
@@ -57,7 +57,86 @@ const endpoints: EndpointConfig[] = [
         country: 'US',
       },
     },
-    expectedBug: 'Unhandled promise rejection - missing await on payment processing',
+    expectedBug: 'Missing await on paymentService.processPayment() - accessing Promise properties instead of resolved value',
+  },
+  {
+    id: 'search',
+    name: 'Search',
+    description: 'Full-text search across users and products',
+    endpoint: '/api/search?q=widget&type=product',
+    method: 'GET',
+    expectedBug: 'TypeError: Cannot read properties of undefined (reading \'forEach\') - users array undefined check missing',
+  },
+  {
+    id: 'analytics',
+    name: 'Get Analytics',
+    description: 'Fetch analytics metrics with optional comparison data',
+    endpoint: '/api/analytics?compare=true',
+    method: 'GET',
+    expectedBug: 'Cannot read properties of undefined (reading \'length\') - users could be undefined from db',
+  },
+  {
+    id: 'notifications',
+    name: 'Get Notifications',
+    description: 'Fetch user notifications with read/unread filtering',
+    endpoint: '/api/notifications?userId=usr_1a2b3c&unread=true',
+    method: 'GET',
+    expectedBug: 'Date comparison issues with expiresAt field - type coercion problems',
+  },
+  {
+    id: 'upload',
+    name: 'List Uploads',
+    description: 'List uploaded files with size calculation',
+    endpoint: '/api/upload',
+    method: 'GET',
+    expectedBug: 'reduce() without initial value on empty array throws TypeError',
+  },
+  {
+    id: 'login',
+    name: 'Login',
+    description: 'Authenticate user with email and password',
+    endpoint: '/api/auth/login',
+    method: 'POST',
+    body: {
+      email: 'sarah.chen@company.com',
+      password: 'admin123',
+      rememberMe: true,
+    },
+    expectedBug: 'users[0] access on potentially undefined array - timing attack vulnerability',
+  },
+  {
+    id: 'comments',
+    name: 'Get Comments',
+    description: 'Fetch comments for a product with nested replies',
+    endpoint: '/api/comments?entityType=product&entityId=1001&replies=true',
+    method: 'GET',
+    expectedBug: 'Infinite recursion possible in buildReplyTree() with circular parentId references',
+  },
+  {
+    id: 'export',
+    name: 'Create Export',
+    description: 'Start an async data export job',
+    endpoint: '/api/export',
+    method: 'POST',
+    body: {
+      entity: 'users',
+      format: 'csv',
+      userId: 'usr_1a2b3c',
+    },
+    expectedBug: 'CSV conversion fails to escape special characters - malformed output',
+  },
+  {
+    id: 'settings',
+    name: 'Update Settings',
+    description: 'Partially update user settings',
+    endpoint: '/api/settings',
+    method: 'PATCH',
+    body: {
+      userId: 'usr_1a2b3c',
+      theme: 'dark',
+      notifications: { email: false },
+    },
+    expectedBug: 'Shallow merge overwrites nested objects - notifications.push/sms/marketing lost',
   },
 ];
 
@@ -101,6 +180,14 @@ export default function Dashboard() {
     }
   };
 
+  const testAll = async () => {
+    for (const config of endpoints) {
+      await testEndpoint(config);
+      // Small delay between requests
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-950 text-gray-100">
       {/* Header */}
@@ -113,11 +200,20 @@ export default function Dashboard() {
               </div>
               <div>
                 <h1 className="text-xl font-semibold">BugBoy Demo</h1>
-                <p className="text-sm text-gray-400">BugStack Test Application</p>
+                <p className="text-sm text-gray-400">11 Buggy API Routes for BugStack Testing</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="px-2 py-1 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={testAll}
+                className="px-4 py-2 rounded-lg bg-fuchsia-600 hover:bg-fuchsia-500 transition-colors font-medium text-sm flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Test All Endpoints
+              </button>
+              <span className="px-2 py-1 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 text-sm">
                 Demo Mode
               </span>
             </div>
@@ -136,15 +232,31 @@ export default function Dashboard() {
             <div>
               <h3 className="font-medium text-blue-300">About This Demo</h3>
               <p className="text-sm text-gray-300 mt-1">
-                This application contains intentional bugs to demonstrate BugStack&apos;s automatic error detection and PR creation.
-                Click the test buttons below to trigger errors that will be captured by the error-capture-sdk.
+                This application contains <strong>11 intentional bugs</strong> across different API routes to demonstrate BugStack&apos;s
+                automatic error detection and PR creation. Click individual test buttons or &quot;Test All Endpoints&quot; to trigger errors.
               </p>
             </div>
           </div>
         </div>
 
+        {/* Stats Bar */}
+        <div className="mb-6 grid grid-cols-3 gap-4">
+          <div className="p-4 rounded-lg bg-gray-900/50 border border-gray-800">
+            <div className="text-2xl font-bold text-violet-400">11</div>
+            <div className="text-sm text-gray-400">Buggy Endpoints</div>
+          </div>
+          <div className="p-4 rounded-lg bg-gray-900/50 border border-gray-800">
+            <div className="text-2xl font-bold text-emerald-400">{Object.values(results).filter(r => r.data?.success).length}</div>
+            <div className="text-sm text-gray-400">Successful</div>
+          </div>
+          <div className="p-4 rounded-lg bg-gray-900/50 border border-gray-800">
+            <div className="text-2xl font-bold text-red-400">{Object.values(results).filter(r => r.error || (r.data && !r.data.success)).length}</div>
+            <div className="text-sm text-gray-400">Failed/Errors</div>
+          </div>
+        </div>
+
         {/* Endpoint Cards */}
-        <div className="grid gap-6">
+        <div className="grid gap-4">
           {endpoints.map(config => {
             const result = results[config.id];
 
@@ -154,30 +266,34 @@ export default function Dashboard() {
                 className="rounded-xl border border-gray-800 bg-gray-900/50 overflow-hidden"
               >
                 {/* Card Header */}
-                <div className="p-6 border-b border-gray-800">
+                <div className="p-4 border-b border-gray-800">
                   <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-2">
                         <span className={`px-2 py-0.5 rounded text-xs font-mono font-medium ${
                           config.method === 'GET'
                             ? 'bg-emerald-500/10 text-emerald-400'
                             : config.method === 'POST'
                             ? 'bg-blue-500/10 text-blue-400'
-                            : 'bg-amber-500/10 text-amber-400'
+                            : config.method === 'PATCH'
+                            ? 'bg-amber-500/10 text-amber-400'
+                            : config.method === 'PUT'
+                            ? 'bg-purple-500/10 text-purple-400'
+                            : 'bg-red-500/10 text-red-400'
                         }`}>
                           {config.method}
                         </span>
-                        <h2 className="text-lg font-semibold">{config.name}</h2>
+                        <h2 className="text-base font-semibold">{config.name}</h2>
                       </div>
-                      <p className="text-gray-400 text-sm mb-3">{config.description}</p>
-                      <code className="text-sm text-gray-500 font-mono bg-gray-800/50 px-2 py-1 rounded">
+                      <p className="text-gray-400 text-sm mb-2">{config.description}</p>
+                      <code className="text-xs text-gray-500 font-mono bg-gray-800/50 px-2 py-1 rounded">
                         {config.endpoint}
                       </code>
                     </div>
                     <button
                       onClick={() => testEndpoint(config)}
                       disabled={result?.loading}
-                      className="px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm flex items-center gap-2"
+                      className="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm flex items-center gap-2 shrink-0"
                     >
                       {result?.loading ? (
                         <>
@@ -193,47 +309,44 @@ export default function Dashboard() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
-                          Test Endpoint
+                          Test
                         </>
                       )}
                     </button>
                   </div>
 
                   {/* Expected Bug Info */}
-                  <div className="mt-4 p-3 rounded-lg bg-red-500/5 border border-red-500/10">
+                  <div className="mt-3 p-2 rounded-lg bg-red-500/5 border border-red-500/10">
                     <div className="flex items-start gap-2">
                       <svg className="w-4 h-4 text-red-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                       </svg>
-                      <div>
-                        <span className="text-xs text-red-300 font-medium">Expected Bug:</span>
-                        <p className="text-sm text-red-200/80 font-mono mt-0.5">{config.expectedBug}</p>
-                      </div>
+                      <p className="text-xs text-red-200/80 font-mono">{config.expectedBug}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Response Panel */}
                 {(result?.data || result?.error) && (
-                  <div className="p-4 bg-gray-950/50">
+                  <div className="p-3 bg-gray-950/50">
                     <div className="flex items-center gap-2 mb-2">
                       {result.data?.success ? (
-                        <span className="flex items-center gap-1.5 text-sm text-emerald-400">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <span className="flex items-center gap-1.5 text-xs text-emerald-400">
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
                           Success
                         </span>
                       ) : (
-                        <span className="flex items-center gap-1.5 text-sm text-red-400">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <span className="flex items-center gap-1.5 text-xs text-red-400">
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
                           {result.error ? 'Error' : 'Failed'}
                         </span>
                       )}
                     </div>
-                    <pre className="text-xs font-mono text-gray-300 bg-gray-900 rounded-lg p-4 overflow-x-auto max-h-64 overflow-y-auto">
+                    <pre className="text-xs font-mono text-gray-300 bg-gray-900 rounded-lg p-3 overflow-x-auto max-h-48 overflow-y-auto">
                       {result.error
                         ? result.error
                         : JSON.stringify(result.data, null, 2)}
@@ -248,9 +361,8 @@ export default function Dashboard() {
         {/* Footer Info */}
         <div className="mt-12 text-center text-gray-500 text-sm">
           <p>
-            Powered by{' '}
-            <span className="text-violet-400 font-medium">error-capture-sdk</span>
-            {' '}• Errors are automatically captured and sent to BugStack
+            Ready for <span className="text-violet-400 font-medium">BugStack</span> integration
+            {' '}• Wrap these routes with error-capture-sdk to capture bugs
           </p>
         </div>
       </main>
