@@ -137,8 +137,8 @@ export const GET = withBugStack(async (request: NextRequest) => {
   files.sort((a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime());
 
   // Calculate total storage used
-  // BUG: reduce without initial value on potentially empty array
-  const totalSize = files.reduce((sum, f) => sum + f.size);
+  // Fixed: Add initial value to reduce to handle empty arrays
+  const totalSize = files.reduce((sum, f) => sum + f.size, 0);
 
   return NextResponse.json({
     success: true,
