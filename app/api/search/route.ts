@@ -13,95 +13,134 @@ interface SearchResult {
 
 // GET /api/search - Full-text search across users and products
 export const GET = withBugStack(async (request: NextRequest) => {
-  const searchParams = request.nextUrl.searchParams;
-  const query = searchParams.get('q');
-  const type = searchParams.get('type'); // 'user', 'product', or null for all
-  const limit = parseInt(searchParams.get('limit') || '10');
+  try {
+    const searchParams = request.nextUrl.searchParams;
+    const query = searchParams.get('q');
+    const type = searchParams.get('type'); // 'user', 'product', or null for all
+    const limitParam = searchParams.get('limit') || '10';
+    const limit = Math.max(1, Math.min(100, parseInt(limitParam) || 10)); // Validate limit
 
-  if (!query) {
-    return NextResponse.json(
-      { success: false, error: 'Search query is required' },
-      { status: 400 }
-    );
-  }
-
-  const results: SearchResult[] = [];
-  const searchTerms = query.toLowerCase().split(' ');
-
-  // BUG: Accessing property on undefined - simulating search index failure
-  const searchIndex = (undefined as any).indexes.primary;
-
-  // Search users
-  if (!type || type === 'user') {
-    const users = await db.users.findMany();
-
-    // BUG: Not checking if users is undefined before using forEach
-    // This will throw: "Cannot read properties of undefined (reading 'forEach')"
-    users.forEach(user => {
-      const nameMatch = searchTerms.some(term =>
-        user.name.toLowerCase().includes(term)
+    if (!query || query.trim() === '') {
+      return NextResponse.json(
+        { success: false, error: 'Search query is required and cannot be empty' },
+        { status: 400 }
       );
-      const emailMatch = searchTerms.some(term =>
-        user.email.toLowerCase().includes(term)
+    }
+
+    const results: SearchResult[] = [];
+    const searchTerms = query.toLowerCase().trim().split(' ').filter(term => term.length > 0);
+
+    if (searchTerms.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Search query must contain valid search terms' },
+        { status: 400 }
       );
+    }
 
-      if (nameMatch || emailMatch) {
-        // BUG: Calculating score but dividing by zero when no terms match
-        const matchCount = searchTerms.filter(term =>
-          user.name.toLowerCase().includes(term) ||
-          user.email.toLowerCase().includes(term)
-        ).length;
+    // Search users
+    if (!type || type === 'user') {
+      try {
+        const users = await db.users.findMany();
+        
+        if (users && Array.isArray(users)) {
+          users.forEach(user => {
+            // Ensure user has required properties
+            if (!user || !user.name || !user.email) {
+              return; // Skip invalid user records
+            }
 
-        results.push({
-          type: 'user',
-          id: user.id,
-          title: user.name,
-          description: `${user.role} - ${user.email}`,
-          score: matchCount / searchTerms.length,
-        });
-      }
-    });
-  }
+            const nameMatch = searchTerms.some(term =>
+              user.name.toLowerCase().includes(term)
+            );
+            const emailMatch = searchTerms.some(term =>
+              user.email.toLowerCase().includes(term)
+            );
 
-  // Search products
-  if (!type || type === 'product') {
-    const products = await db.products.findMany();
+            if (nameMatch || emailMatch) {
+              const matchCount = searchTerms.filter(term =>
+                user.name.toLowerCase().includes(term) ||
+                user.email.toLowerCase().includes(term)
+              ).length;
 
-    for (const product of products) {
-      const nameMatch = searchTerms.some(term =>
-        product.name.toLowerCase().includes(term)
-      );
-      const descMatch = searchTerms.some(term =>
-        product.description.toLowerCase().includes(term)
-      );
+              // Ensure we don't divide by zero
+              const score = searchTerms.length > 0 ? matchCount / searchTerms.length : 0;
 
-      if (nameMatch || descMatch) {
-        results.push({
-          type: 'product',
-          id: product.id,
-          title: product.name,
-          description: `$${product.price} - ${product.category}`,
-          score: nameMatch ? 1.0 : 0.5,
-        });
+              results.push({
+                type: 'user',
+                id: user.id,
+                title: user.name,
+                description: `${user.role || 'User'} - ${user.email}`,
+                score,
+              });
+            }
+          });
+        }
+      } catch (userSearchError) {
+        console.error('Error searching users:', userSearchError);
+        // Continue with product search even if user search fails
       }
     }
+
+    // Search products
+    if (!type || type === 'product') {
+      try {
+        const products = await db.products.findMany();
+        
+        if (products && Array.isArray(products)) {
+          for (const product of products) {
+            // Ensure product has required properties
+            if (!product || !product.name || !product.description) {
+              continue; // Skip invalid product records
+            }
+
+            const nameMatch = searchTerms.some(term =>
+              product.name.toLowerCase().includes(term)
+            );
+            const descMatch = searchTerms.some(term =>
+              product.description.toLowerCase().includes(term)
+            );
+
+            if (nameMatch || descMatch) {
+              results.push({
+                type: 'product',
+                id: product.id,
+                title: product.name,
+                description: `$${product.price || 0} - ${product.category || 'Uncategorized'}`,
+                score: nameMatch ? 1.0 : 0.5,
+              });
+            }
+          }
+        }
+      } catch (productSearchError) {
+        console.error('Error searching products:', productSearchError);
+        // Continue even if product search fails
+      }
+    }
+
+    // Sort by score descending
+    results.sort((a, b) => b.score - a.score);
+
+    // Apply limit safely
+    const limitedResults = results.slice(0, limit);
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        query,
+        results: limitedResults,
+        total: results.length,
+        returned: limitedResults.length,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Search API error:', error);
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Internal server error occurred while processing search request' 
+      },
+      { status: 500 }
+    );
   }
-
-  // Sort by score descending
-  results.sort((a, b) => b.score - a.score);
-
-  // BUG: Using slice with potentially NaN limit (if limit param is invalid string)
-  // NaN in slice causes unexpected behavior
-  const limitedResults = results.slice(0, limit);
-
-  return NextResponse.json({
-    success: true,
-    data: {
-      query,
-      results: limitedResults,
-      total: results.length,
-      returned: limitedResults.length,
-    },
-    timestamp: new Date().toISOString(),
-  });
 });
