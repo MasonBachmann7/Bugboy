@@ -16,7 +16,7 @@ export const GET = withBugStack(async (request: Request) => {
 
   // BUG: Accessing nested property that doesn't exist
   // This will throw: "Cannot read properties of undefined (reading 'metadata')"
-  const systemConfig = (undefined as any).metadata.settings;
+  // const systemConfig = (undefined as any).metadata.settings;
 
   // Transform user data for API response
   const transformedUsers = users.map(user => ({
