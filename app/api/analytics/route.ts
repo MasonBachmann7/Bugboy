@@ -27,71 +27,94 @@ const historicalData = {
 
 // GET /api/analytics - Fetch analytics metrics
 export const GET = withBugStack(async (request: NextRequest) => {
-  const searchParams = request.nextUrl.searchParams;
-  const period = searchParams.get('period') || 'current';
-  const includeComparison = searchParams.get('compare') === 'true';
+  try {
+    const searchParams = request.nextUrl.searchParams;
+    const period = searchParams.get('period') || 'current';
+    const includeComparison = searchParams.get('compare') === 'true';
 
-  // Fetch current data
-  const users = await db.users.findMany();
-  const products = await db.products.findMany();
+    // Fetch current data
+    const users = await db.users.findMany();
+    const products = await db.products.findMany();
 
-  // BUG: TypeError - calling toUpperCase on a number
-  const formattedPeriod = (12345 as any).toUpperCase();
+    // Fixed: Use the period string instead of number
+    const formattedPeriod = period.toUpperCase();
 
-  // BUG: Accessing .length on potentially undefined users
-  // This will throw: "Cannot read properties of undefined (reading 'length')"
-  const totalUsers = users.length;
+    // Fixed: Null check for users
+    if (!users || !Array.isArray(users)) {
+      return NextResponse.json(
+        { success: false, error: 'Unable to fetch user data' },
+        { status: 500 }
+      )
+    }
 
-  // Calculate active users (logged in within 30 days)
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const totalUsers = users.length;
 
-  // BUG: users.filter on potentially undefined users
-  const activeUsers = users.filter(
-    user => user.lastLoginAt && user.lastLoginAt > thirtyDaysAgo
-  ).length;
+    // Calculate active users (logged in within 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  // Calculate revenue from products (simulated)
-  const totalRevenue = products.reduce((sum, product) => {
-    // BUG: Simulating sales calculation with potential floating point issues
-    return sum + (product.price * product.inventory * 0.1);
-  }, 0);
+    // Fixed: Already checked users is array above
+    const activeUsers = users.filter(
+      user => user.lastLoginAt && user.lastLoginAt > thirtyDaysAgo
+    ).length;
 
-  // BUG: Division by zero if no users
-  const averageOrderValue = totalRevenue / totalUsers;
+    // Fixed: Null check for products
+    if (!products || !Array.isArray(products)) {
+      return NextResponse.json(
+        { success: false, error: 'Unable to fetch product data' },
+        { status: 500 }
+      )
+    }
 
-  const analytics: AnalyticsData = {
-    period,
-    metrics: {
-      totalUsers,
-      activeUsers,
-      totalProducts: products.length,
-      totalRevenue: Math.round(totalRevenue * 100) / 100,
-      averageOrderValue: Math.round(averageOrderValue * 100) / 100,
-    },
-    trends: {
-      userGrowth: 0,
-      revenueGrowth: 0,
-    },
-  };
+    // Calculate revenue from products (simulated)
+    const totalRevenue = products.reduce((sum, product) => {
+      // BUG: Simulating sales calculation with potential floating point issues
+      return sum + (product.price * product.inventory * 0.1);
+    }, 0);
 
-  // Calculate trends if comparison requested
-  if (includeComparison) {
-    const previousPeriod = historicalData['2024-02'];
+    // Fixed: Handle division by zero
+    const averageOrderValue = totalUsers > 0 ? totalRevenue / totalUsers : 0;
 
-    // BUG: Not checking if previousPeriod exists before accessing properties
-    // If period key doesn't exist, this throws undefined errors
-    analytics.trends.userGrowth =
-      ((totalUsers - previousPeriod.users) / previousPeriod.users) * 100;
-    analytics.trends.revenueGrowth =
-      ((totalRevenue - previousPeriod.revenue) / previousPeriod.revenue) * 100;
+    const analytics: AnalyticsData = {
+      period,
+      metrics: {
+        totalUsers,
+        activeUsers,
+        totalProducts: products.length,
+        totalRevenue: Math.round(totalRevenue * 100) / 100,
+        averageOrderValue: Math.round(averageOrderValue * 100) / 100,
+      },
+      trends: {
+        userGrowth: 0,
+        revenueGrowth: 0,
+      },
+    };
+
+    // Calculate trends if comparison requested
+    if (includeComparison) {
+      const previousPeriod = historicalData['2024-02'];
+
+      // Fixed: Check if previousPeriod exists and has required properties
+      if (previousPeriod && previousPeriod.users > 0 && previousPeriod.revenue > 0) {
+        analytics.trends.userGrowth =
+          ((totalUsers - previousPeriod.users) / previousPeriod.users) * 100;
+        analytics.trends.revenueGrowth =
+          ((totalRevenue - previousPeriod.revenue) / previousPeriod.revenue) * 100;
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: analytics,
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Analytics GET error:', error)
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    )
   }
-
-  return NextResponse.json({
-    success: true,
-    data: analytics,
-    generatedAt: new Date().toISOString(),
-  });
 });
 
 // POST /api/analytics - Track custom event
