@@ -59,9 +59,6 @@ export const GET = withBugStack(async (request: NextRequest) => {
     );
   }
 
-  // BUG: Accessing nested property on undefined - simulating cache miss
-  const cachedComments = (undefined as any).comments.data;
-
   // Parse entity ID based on type
   // BUG: parseInt on string entityId for user/order types causes NaN
   const parsedEntityId = entityType === 'product'
