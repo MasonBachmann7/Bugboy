@@ -70,11 +70,11 @@ export const POST = withBugStack(async (request: NextRequest) => {
       )
     }
 
-    // Find user by email
+    // Find user by email - handle potential null result
     const users = await db.users.findMany({ where: { email } })
 
-    // Check if users array exists and has at least one user
-    if (!users || users.length === 0) {
+    // Check if users exists and is an array with at least one user
+    if (!users || !Array.isArray(users) || users.length === 0) {
       // Record failed attempt
       attempts.push({ email, timestamp: new Date(), success: false, ip })
       loginAttempts.set(email, attempts)
