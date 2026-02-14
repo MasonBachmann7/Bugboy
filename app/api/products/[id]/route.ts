@@ -11,8 +11,17 @@ export const GET = withBugStack(async (request: NextRequest, { params }: { param
   // Parse the product ID from the URL
   const productId = parseInt(params.id);
 
-  // BUG: Calling method on null - simulating cache lookup failure
-  const cachedProduct = (null as any).get(productId);
+  // Validate product ID is a valid number
+  if (isNaN(productId)) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Invalid product ID',
+        productId: params.id,
+      },
+      { status: 400 }
+    );
+  }
 
   // Fetch product from database
   const product = await db.products.findUnique({
@@ -20,7 +29,6 @@ export const GET = withBugStack(async (request: NextRequest, { params }: { param
   });
 
   // Handle product not found
-  // BUG: If productId is NaN, this comparison fails silently
   if (!product) {
     return NextResponse.json(
       {
