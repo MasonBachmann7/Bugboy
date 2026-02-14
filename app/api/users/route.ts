@@ -14,10 +14,6 @@ export const GET = withBugStack(async (request: Request) => {
   // Fetch users from database
   const users = await db.users.findMany(queryOptions);
 
-  // BUG: Accessing nested property that doesn't exist
-  // This will throw: "Cannot read properties of undefined (reading 'metadata')"
-  const systemConfig = (undefined as any).metadata.settings;
-
   // Transform user data for API response
   const transformedUsers = users.map(user => ({
     id: user.id,
