@@ -34,7 +34,6 @@ const passwordStore: Record<string, string> = {
 
 // POST /api/auth/login - Authenticate user
 export const POST = withBugStack(async (request: NextRequest) => {
-  try {
     const body = await request.json()
     const { email, password, rememberMe } = body
 
@@ -137,13 +136,6 @@ export const POST = withBugStack(async (request: NextRequest) => {
         }
       }
     })
-  } catch (error) {
-    console.error('Login error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
 })
 
 // DELETE /api/auth/login - Logout (end session)

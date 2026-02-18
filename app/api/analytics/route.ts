@@ -27,7 +27,6 @@ const historicalData = {
 
 // GET /api/analytics - Fetch analytics metrics
 export const GET = withBugStack(async (request: NextRequest) => {
-  try {
     const searchParams = request.nextUrl.searchParams;
     const period = searchParams.get('period') || 'current';
     const includeComparison = searchParams.get('compare') === 'true';
@@ -108,13 +107,6 @@ export const GET = withBugStack(async (request: NextRequest) => {
       data: analytics,
       generatedAt: new Date().toISOString(),
     });
-  } catch (error) {
-    console.error('Analytics GET error:', error)
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
 });
 
 // POST /api/analytics - Track custom event
