@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 interface ApiResponse {
-  success: boolean;
+  success?: boolean;
   data?: unknown;
   error?: string;
   message?: string;
@@ -15,128 +15,53 @@ interface EndpointConfig {
   name: string;
   description: string;
   endpoint: string;
-  method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+  method: 'GET' | 'POST';
   body?: object;
-  expectedBug: string;
 }
 
 const endpoints: EndpointConfig[] = [
   {
     id: 'users',
     name: 'List Users',
-    description: 'Fetches all users with role-based filtering and activity status',
+    description: 'Fetches all users with profile data and activity status',
     endpoint: '/api/users',
     method: 'GET',
-    expectedBug: 'TypeError: Cannot read properties of undefined (reading \'map\') - db returns undefined on connection issues',
   },
   {
-    id: 'product',
-    name: 'Get Product',
-    description: 'Retrieves product details by ID with optional inventory status',
-    endpoint: '/api/products/1001?inventory=true',
+    id: 'orders',
+    name: 'Get Orders',
+    description: 'Retrieves orders with revenue summary and top customer',
+    endpoint: '/api/orders?status=cancelled',
     method: 'GET',
-    expectedBug: 'NaN comparison causing unexpected 404 responses for invalid IDs',
-  },
-  {
-    id: 'checkout',
-    name: 'Process Checkout',
-    description: 'Processes a complete checkout flow with payment and inventory',
-    endpoint: '/api/checkout',
-    method: 'POST',
-    body: {
-      customerId: 'usr_1a2b3c',
-      items: [
-        { productId: 1001, quantity: 2 },
-        { productId: 1003, quantity: 1 },
-      ],
-      paymentMethod: 'card',
-      shippingAddress: {
-        line1: '123 Main St',
-        city: 'San Francisco',
-        postalCode: '94102',
-        country: 'US',
-      },
-    },
-    expectedBug: 'Missing await on paymentService.processPayment() - accessing Promise properties instead of resolved value',
-  },
-  {
-    id: 'search',
-    name: 'Search',
-    description: 'Full-text search across users and products',
-    endpoint: '/api/search?q=widget&type=product',
-    method: 'GET',
-    expectedBug: 'TypeError: Cannot read properties of undefined (reading \'forEach\') - users array undefined check missing',
-  },
-  {
-    id: 'analytics',
-    name: 'Get Analytics',
-    description: 'Fetch analytics metrics with optional comparison data',
-    endpoint: '/api/analytics?compare=true',
-    method: 'GET',
-    expectedBug: 'Cannot read properties of undefined (reading \'length\') - users could be undefined from db',
   },
   {
     id: 'notifications',
-    name: 'Get Notifications',
-    description: 'Fetch user notifications with read/unread filtering',
-    endpoint: '/api/notifications?userId=usr_1a2b3c&unread=true',
-    method: 'GET',
-    expectedBug: 'Date comparison issues with expiresAt field - type coercion problems',
-  },
-  {
-    id: 'upload',
-    name: 'List Uploads',
-    description: 'List uploaded files with size calculation',
-    endpoint: '/api/upload',
-    method: 'GET',
-    expectedBug: 'reduce() without initial value on empty array throws TypeError',
-  },
-  {
-    id: 'login',
-    name: 'Login',
-    description: 'Authenticate user with email and password',
-    endpoint: '/api/auth/login',
+    name: 'Send Notification',
+    description: 'Sends a notification to a user via email or push',
+    endpoint: '/api/notifications',
     method: 'POST',
     body: {
-      email: 'sarah.chen@company.com',
-      password: 'admin123',
-      rememberMe: true,
+      userId: 'usr_1a2b3c',
+      message: 'Your order has shipped!',
+      channel: 'email',
     },
-    expectedBug: 'users[0] access on potentially undefined array - timing attack vulnerability',
   },
   {
-    id: 'comments',
-    name: 'Get Comments',
-    description: 'Fetch comments for a product with nested replies',
-    endpoint: '/api/comments?entityType=product&entityId=1001&replies=true',
+    id: 'products',
+    name: 'List Products',
+    description: 'Paginated product listing with category and stock info',
+    endpoint: '/api/products',
     method: 'GET',
-    expectedBug: 'Infinite recursion possible in buildReplyTree() with circular parentId references',
   },
   {
-    id: 'export',
-    name: 'Create Export',
-    description: 'Start an async data export job',
-    endpoint: '/api/export',
+    id: 'analytics',
+    name: 'Track Page View',
+    description: 'Records a page view for analytics tracking',
+    endpoint: '/api/analytics/track',
     method: 'POST',
     body: {
-      entity: 'users',
-      format: 'csv',
-      userId: 'usr_1a2b3c',
+      pageId: '/',
     },
-    expectedBug: 'CSV conversion fails to escape special characters - malformed output',
-  },
-  {
-    id: 'settings',
-    name: 'Update Settings',
-    description: 'Partially update user settings',
-    endpoint: '/api/settings',
-    method: 'PATCH',
-    body: {
-      userId: 'usr_1a2b3c',
-      theme: 'dark',
-      notifications: { email: false },
-    },
-    expectedBug: 'Shallow merge overwrites nested objects - notifications.push/sms/marketing lost',
   },
 ];
 
@@ -183,9 +108,13 @@ export default function Dashboard() {
   const testAll = async () => {
     for (const config of endpoints) {
       await testEndpoint(config);
-      // Small delay between requests
       await new Promise(resolve => setTimeout(resolve, 300));
     }
+  };
+
+  const hasError = (result: { data: ApiResponse | null; error: string | null } | undefined) => {
+    if (!result) return false;
+    return result.error || (result.data && (result.data.error || result.data.message?.includes('Internal')));
   };
 
   return (
@@ -199,8 +128,8 @@ export default function Dashboard() {
                 <span className="text-xl font-bold">B</span>
               </div>
               <div>
-                <h1 className="text-xl font-semibold">BugBoy Demo</h1>
-                <p className="text-sm text-gray-400">11 Buggy API Routes for BugStack Testing</p>
+                <h1 className="text-xl font-semibold">BugBoy</h1>
+                <p className="text-sm text-gray-400">Internal Tools Dashboard</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -211,11 +140,8 @@ export default function Dashboard() {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                Test All Endpoints
+                Test All
               </button>
-              <span className="px-2 py-1 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 text-sm">
-                Demo Mode
-              </span>
             </div>
           </div>
         </div>
@@ -223,35 +149,23 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Info Banner */}
-        <div className="mb-8 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
-          <div className="flex gap-3">
-            <svg className="w-5 h-5 text-blue-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div>
-              <h3 className="font-medium text-blue-300">About This Demo</h3>
-              <p className="text-sm text-gray-300 mt-1">
-                This application contains <strong>11 intentional bugs</strong> across different API routes to demonstrate BugStack&apos;s
-                automatic error detection and PR creation. Click individual test buttons or &quot;Test All Endpoints&quot; to trigger errors.
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* Stats Bar */}
         <div className="mb-6 grid grid-cols-3 gap-4">
           <div className="p-4 rounded-lg bg-gray-900/50 border border-gray-800">
-            <div className="text-2xl font-bold text-violet-400">11</div>
-            <div className="text-sm text-gray-400">Buggy Endpoints</div>
+            <div className="text-2xl font-bold text-violet-400">{endpoints.length}</div>
+            <div className="text-sm text-gray-400">API Endpoints</div>
           </div>
           <div className="p-4 rounded-lg bg-gray-900/50 border border-gray-800">
-            <div className="text-2xl font-bold text-emerald-400">{Object.values(results).filter(r => r.data?.success).length}</div>
+            <div className="text-2xl font-bold text-emerald-400">
+              {Object.values(results).filter(r => r.data && !r.data.error && !r.data.message?.includes('Internal')).length}
+            </div>
             <div className="text-sm text-gray-400">Successful</div>
           </div>
           <div className="p-4 rounded-lg bg-gray-900/50 border border-gray-800">
-            <div className="text-2xl font-bold text-red-400">{Object.values(results).filter(r => r.error || (r.data && !r.data.success)).length}</div>
-            <div className="text-sm text-gray-400">Failed/Errors</div>
+            <div className="text-2xl font-bold text-red-400">
+              {Object.values(results).filter(r => hasError(r)).length}
+            </div>
+            <div className="text-sm text-gray-400">Errors</div>
           </div>
         </div>
 
@@ -273,13 +187,7 @@ export default function Dashboard() {
                         <span className={`px-2 py-0.5 rounded text-xs font-mono font-medium ${
                           config.method === 'GET'
                             ? 'bg-emerald-500/10 text-emerald-400'
-                            : config.method === 'POST'
-                            ? 'bg-blue-500/10 text-blue-400'
-                            : config.method === 'PATCH'
-                            ? 'bg-amber-500/10 text-amber-400'
-                            : config.method === 'PUT'
-                            ? 'bg-purple-500/10 text-purple-400'
-                            : 'bg-red-500/10 text-red-400'
+                            : 'bg-blue-500/10 text-blue-400'
                         }`}>
                           {config.method}
                         </span>
@@ -314,23 +222,13 @@ export default function Dashboard() {
                       )}
                     </button>
                   </div>
-
-                  {/* Expected Bug Info */}
-                  <div className="mt-3 p-2 rounded-lg bg-red-500/5 border border-red-500/10">
-                    <div className="flex items-start gap-2">
-                      <svg className="w-4 h-4 text-red-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                      <p className="text-xs text-red-200/80 font-mono">{config.expectedBug}</p>
-                    </div>
-                  </div>
                 </div>
 
                 {/* Response Panel */}
                 {(result?.data || result?.error) && (
                   <div className="p-3 bg-gray-950/50">
                     <div className="flex items-center gap-2 mb-2">
-                      {result.data?.success ? (
+                      {!hasError(result) ? (
                         <span className="flex items-center gap-1.5 text-xs text-emerald-400">
                           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -342,7 +240,7 @@ export default function Dashboard() {
                           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
-                          {result.error ? 'Error' : 'Failed'}
+                          Error
                         </span>
                       )}
                     </div>
@@ -358,12 +256,9 @@ export default function Dashboard() {
           })}
         </div>
 
-        {/* Footer Info */}
+        {/* Footer */}
         <div className="mt-12 text-center text-gray-500 text-sm">
-          <p>
-            Ready for <span className="text-violet-400 font-medium">BugStack</span> integration
-            {' '}• Wrap these routes with error-capture-sdk to capture bugs
-          </p>
+          <p>BugBoy Internal Tools v1.0</p>
         </div>
       </main>
     </div>

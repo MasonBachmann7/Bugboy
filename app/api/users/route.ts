@@ -1,41 +1,30 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { withBugStack } from '@bugstack/error-capture-sdk';
 import '@/lib/bugstack';
-import { db, User } from '@/lib/db';
+import { db } from '@/lib/db';
 
-// GET /api/users - Fetch all users with optional role filter
-export const GET = withBugStack(async (request: Request) => {
-  const url = new URL(request.url);
-  const role = url.searchParams.get('role') as User['role'] | null;
+export const GET = withBugStack(async (request: NextRequest) => {
+  const { searchParams } = new URL(request.url);
+  const role = searchParams.get('role');
 
-  // Build query options
-  const queryOptions = role ? { where: { role } } : undefined;
+  const users = await db.users.findMany(
+    role ? { where: { role: role as 'admin' | 'user' | 'guest' } } : undefined
+  );
 
-  // Fetch users from database
-  const users = await db.users.findMany(queryOptions);
-
-  // BUG: Accessing nested property that doesn't exist
-  // This will throw: "Cannot read properties of undefined (reading 'metadata')"
-  const systemConfig = (undefined as any).metadata.settings;
-
-  // Transform user data for API response
   const transformedUsers = users.map(user => ({
     id: user.id,
+    name: user.name,
     email: user.email,
-    displayName: user.name,
-    role: user.role,
-    memberSince: user.createdAt.toISOString(),
+    avatar: user.profile.avatarUrl,
+    department: user.profile.department,
+    joinedAt: user.createdAt.toISOString(),
     isActive: user.lastLoginAt
       ? Date.now() - user.lastLoginAt.getTime() < 30 * 24 * 60 * 60 * 1000
       : false,
   }));
 
   return NextResponse.json({
-    success: true,
-    data: transformedUsers,
-    meta: {
-      total: transformedUsers.length,
-      timestamp: new Date().toISOString(),
-    },
+    users: transformedUsers,
+    total: transformedUsers.length,
   });
 });
