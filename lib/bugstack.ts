@@ -1,6 +1,6 @@
-import { ErrorCaptureClient } from "@bugstack/error-capture-sdk";
+import { BugStackClient } from "bugstack-sdk/next";
 
-ErrorCaptureClient.init({
+BugStackClient.init({
   apiKey: process.env.BUGSTACK_API_KEY!,
   projectId: "bugboy",
 });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withBugStack } from '@bugstack/error-capture-sdk';
+import { withBugStack } from 'bugstack-sdk/next';
 import '@/lib/bugstack';
 import { db, sendNotification } from '@/lib/db';
 
