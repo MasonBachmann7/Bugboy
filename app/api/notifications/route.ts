@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { withBugStack } from 'bugstack-sdk/next';
+import { withBugStack } from 'bugstack-sdk';
 import '@/lib/bugstack';
 import { db, sendNotification } from '@/lib/db';
 

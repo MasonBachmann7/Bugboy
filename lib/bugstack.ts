@@ -1,4 +1,4 @@
-import { BugStackClient } from "bugstack-sdk/next";
+import { BugStackClient } from "bugstack-sdk";
 
 BugStackClient.init({
   apiKey: process.env.BUGSTACK_API_KEY!,
