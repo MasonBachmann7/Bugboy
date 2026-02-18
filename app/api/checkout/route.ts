@@ -124,12 +124,12 @@ export const POST = withBugStack(async (request: NextRequest) => {
   // which is falsy, but !undefined is true... wait, that means this WOULD fail
   // Actually: !paymentResult.success where paymentResult is a Promise
   // Promise.success is undefined, !undefined = true, so this returns early incorrectly
-  if (!paymentResult.success) {
+  if (!(paymentResult as any).success) {
     return NextResponse.json(
       {
         success: false,
         error: 'Payment failed',
-        details: paymentResult.error,
+        details: (paymentResult as any).error,
       },
       { status: 402 }
     );
@@ -158,7 +158,7 @@ export const POST = withBugStack(async (request: NextRequest) => {
         tax: tax.toFixed(2),
         total: total.toFixed(2),
       },
-      transactionId: paymentResult.transactionId,
+      transactionId: (paymentResult as any).transactionId,
     },
     timestamp: new Date().toISOString(),
   });

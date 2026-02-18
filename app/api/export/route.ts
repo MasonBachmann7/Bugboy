@@ -100,10 +100,10 @@ async function processExport(
     switch (entity) {
       case 'users':
         // BUG: users could be undefined, causing iteration to fail
-        data = await db.users.findMany();
+        data = (await db.users.findMany()) as unknown[];
         break;
       case 'products':
-        data = await db.products.findMany();
+        data = (await db.products.findMany()) as unknown[];
         break;
       case 'orders':
         // BUG: orders entity doesn't have findMany - will crash

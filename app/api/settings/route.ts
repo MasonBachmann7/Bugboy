@@ -273,7 +273,7 @@ export const DELETE = withBugStack(async (request: NextRequest) => {
 
     // BUG: Direct assignment to section doesn't work with TypeScript
     // This is a type error but might pass at runtime with type coercion
-    (settings as Record<string, unknown>)[section] = defaultValue;
+    (settings as unknown as Record<string, unknown>)[section] = defaultValue;
     settings.updatedAt = new Date();
 
     settingsStore.set(userId, settings);

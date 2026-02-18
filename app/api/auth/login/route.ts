@@ -220,10 +220,10 @@ export const GET = withBugStack(async (request: NextRequest) => {
         expiresAt: session.expiresAt.toISOString(),
         // BUG: user could be null if deleted after session created
         user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
+          id: user!.id,
+          email: user!.email,
+          name: user!.name,
+          role: user!.role,
         },
       },
     },

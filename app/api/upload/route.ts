@@ -138,7 +138,7 @@ export const GET = withBugStack(async (request: NextRequest) => {
 
   // Calculate total storage used
   // BUG: reduce without initial value on potentially empty array
-  const totalSize = files.reduce((sum, f) => sum + f.size);
+  const totalSize = files.reduce((sum: any, f) => sum + f.size);
 
   return NextResponse.json({
     success: true,
@@ -146,7 +146,7 @@ export const GET = withBugStack(async (request: NextRequest) => {
       files,
       count: files.length,
       totalSize,
-      totalSizeFormatted: `${(totalSize / 1024 / 1024).toFixed(2)}MB`,
+      totalSizeFormatted: `${((totalSize as unknown as number) / 1024 / 1024).toFixed(2)}MB`,
     },
   });
 });

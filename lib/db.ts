@@ -93,11 +93,6 @@ export const db = {
     findMany: async (options?: { where?: Partial<User>; include?: string[] }) => {
       await simulateLatency();
 
-      // Simulate occasional database connection issues
-      if (shouldSimulateError()) {
-        return undefined; // Connection timeout - returns undefined instead of empty array
-      }
-
       if (options?.where) {
         return usersTable.filter(user =>
           Object.entries(options.where!).every(([key, value]) =>
