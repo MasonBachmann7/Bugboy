@@ -22,10 +22,8 @@ export const POST = withBugStack(async (request: NextRequest) => {
     });
     return NextResponse.json({ views: updated.count });
   } else {
-    const created = await db.pageViews.upsert({
-      where: { pageId },
-      update: { count: { increment: 1 }, lastViewedAt: new Date() },
-      create: { pageId, count: 1, lastViewedAt: new Date() },
+    const created = await db.pageViews.create({
+      data: { pageId, count: 1, lastViewedAt: new Date() },
     });
     return NextResponse.json({ views: created.count });
   }
