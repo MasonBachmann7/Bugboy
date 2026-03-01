@@ -355,7 +355,7 @@ export const db = {
 
     upsert: async (options: {
       where: { pageId: string };
-      update: Partial<PageView> & { count?: { increment: number } };
+      update: Omit<Partial<PageView>, 'count'> & { count?: number | { increment: number } };
       create: PageView;
     }) => {
       await simulateLatency();
