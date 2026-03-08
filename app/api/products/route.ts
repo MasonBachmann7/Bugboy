@@ -12,7 +12,7 @@ export const GET = withBugStack(async (request: NextRequest) => {
     take: limit + 1,
     cursor: cursor ? { id: cursor } : undefined,
     orderBy: { createdAt: 'desc' },
-    include: { category: true },
+    include: { category: true }
   });
 
   const hasMore = products.length > limit;
@@ -24,10 +24,10 @@ export const GET = withBugStack(async (request: NextRequest) => {
       id: p.id,
       name: p.name,
       price: p.price,
-      category: p.category.name,
-      inStock: p.inventory > 0,
+      category: p.category?.name || 'Uncategorized',
+      inStock: p.inventory > 0
     })),
     nextCursor,
-    hasMore,
+    hasMore
   });
 });
