@@ -12,19 +12,21 @@ export const POST = withBugStack(async (request: NextRequest) => {
   }
 
   const existing = await db.pageViews.findUnique({
-    where: { pageId },
+    where: { pageId }
   });
 
   if (existing) {
     const updated = await db.pageViews.update({
       where: { pageId },
-      data: { count: existing.count + 1, lastViewedAt: new Date() },
+      data: { count: existing.count + 1, lastViewedAt: new Date() }
     });
     return NextResponse.json({ views: updated.count });
   } else {
-    const created = await db.pageViews.create({
-      data: { pageId, count: 1, lastViewedAt: new Date() },
-    });
+    const created = await db.pageViews.upsert({
+    where: { pageId },
+      update: { count: 1, lastViewedAt: new Date() },
+      create: { pageId, count: 1, lastViewedAt: new Date() }
+});
     return NextResponse.json({ views: created.count });
   }
-});
+    });
