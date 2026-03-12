@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { withErrorCapture } from 'bugstack-sdk/next'
 import '@/lib/bugstack'
 
+export const dynamic = 'force-dynamic'
+
 export const GET = withErrorCapture(
   async (request) => {
     // This will trigger BugStack!
