@@ -11,20 +11,36 @@ export const POST = withBugStack(async (request: NextRequest) => {
     return NextResponse.json({ error: 'pageId is required' }, { status: 400 });
   }
 
+  try {
   const existing = await db.pageViews.findUnique({
-    where: { pageId },
+      where: { pageId }
   });
 
   if (existing) {
     const updated = await db.pageViews.update({
       where: { pageId },
-      data: { count: existing.count + 1, lastViewedAt: new Date() },
+        data: { count: existing.count + 1, lastViewedAt: new Date() }
     });
     return NextResponse.json({ views: updated.count });
   } else {
     const created = await db.pageViews.create({
-      data: { pageId, count: 1, lastViewedAt: new Date() },
+        data: { pageId, count: 1, lastViewedAt: new Date() }
     });
     return NextResponse.json({ views: created.count });
   }
+  } catch (error: any) {
+    if (error.code === 'P2002') {
+      const existing = await db.pageViews.findUnique({
+        where: { pageId }
 });
+      if (existing) {
+        const updated = await db.pageViews.update({
+    where: { pageId },
+          data: { count: existing.count + 1, lastViewedAt: new Date() }
+        })
+        return NextResponse.json({ views: updated.count })
+      }
+    }
+    throw error
+  }
+})
