@@ -22,15 +22,19 @@ export const POST = withBugStack(async (request: NextRequest) => {
 
   const deliveryResult = sendNotification(user.email, message, channel || 'email');
 
+  if (!deliveryResult || !deliveryResult.delivery) {
+    return NextResponse.json({ error: 'Failed to send notification' }, { status: 500 })
+  }
+
   const log = await db.notificationLogs.create({
     data: {
       userId,
       message,
       channel: channel || 'email',
       deliveredAt: deliveryResult.delivery.timestamp,
-      messageId: deliveryResult.delivery.id,
-    },
-  });
+      messageId: deliveryResult.delivery.id
+    }
+});
 
   return NextResponse.json({ success: true, logId: log.id });
-});
+  });
