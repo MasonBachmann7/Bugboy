@@ -41,6 +41,6 @@ export const POST = withBugStack(async (request: NextRequest) => {
         return NextResponse.json({ views: updated.count })
       }
     }
-    throw error
+    return NextResponse.json({ error: 'Failed to track page view' }, { status: 500 })
   }
 })
