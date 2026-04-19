@@ -15,8 +15,8 @@ export const GET = withBugStack(async (request: NextRequest) => {
     id: user.id,
     name: user.name,
     email: user.email,
-    avatar: user.profile.avatarUrl,
-    department: user.profile.department,
+    avatar: user.profile?.avatarUrl,
+    department: user.profile?.department,
     joinedAt: user.createdAt.toISOString(),
     isActive: user.lastLoginAt
       ? Date.now() - user.lastLoginAt.getTime() < 30 * 24 * 60 * 60 * 1000
