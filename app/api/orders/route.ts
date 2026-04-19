@@ -18,7 +18,7 @@ export const GET = withBugStack(async (request: NextRequest) => {
     orders,
     totalRevenue: orders.reduce((sum, order) => sum + order.total, 0),
     averageOrderValue: orders.reduce((sum, order) => sum + order.total, 0) / orders.length,
-    topCustomer: orders.sort((a, b) => b.total - a.total)[0].customer.name,
+    topCustomer: orders.length > 0 ? orders.sort((a, b) => b.total - a.total)[0].customer?.name : null,
   };
 
   return NextResponse.json(summary);
