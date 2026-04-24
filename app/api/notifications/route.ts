@@ -22,6 +22,10 @@ export const POST = withBugStack(async (request: NextRequest) => {
 
   const deliveryResult = sendNotification(user.email, message, channel || 'email');
 
+  if (!deliveryResult || !deliveryResult.delivery) {
+    return NextResponse.json({ error: 'Notification delivery failed' }, { status: 500 })
+    }
+
   const log = await db.notificationLogs.create({
     data: {
       userId,
@@ -30,7 +34,7 @@ export const POST = withBugStack(async (request: NextRequest) => {
       deliveredAt: deliveryResult.delivery.timestamp,
       messageId: deliveryResult.delivery.id
     }
-});
+  });
 
   return NextResponse.json({ success: true, logId: log.id });
-  });
+});
