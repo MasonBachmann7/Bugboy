@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p ${PORT:-3000}",
-    "lint": "next lint"
+    "lint": "next lint",
+    "demo:seed": "tsx scripts/seed-demo-fixtures.ts",
+    "demo:errors": "tsx scripts/trigger-demo-errors.ts"
   },
   "dependencies": {
     "@types/node": "^20.14.10",

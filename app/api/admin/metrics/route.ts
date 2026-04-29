@@ -3,6 +3,8 @@ import { withBugStack } from 'bugstack-sdk';
 import '@/lib/bugstack';
 import { getRedis } from '@/lib/redis';
 
+export const dynamic = 'force-dynamic';
+
 export const GET = withBugStack(async () => {
   const redis = await getRedis();
 
