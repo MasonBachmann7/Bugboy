@@ -19,13 +19,13 @@ export const POST = withBugStack(async (request: NextRequest) => {
     return NextResponse.json({ error: 'insufficient_stock' }, { status: 400 });
   }
 
-  const order = await db.orders.create({
-    data: { productId, quantity, userId },
-  });
-
   await db.products.update({
     where: { id: productId },
-    data: { stock: { decrement: quantity } },
+    data: { stock: { decrement: quantity } }
+  });
+
+  const order = await db.orders.create({
+    data: { productId, quantity, userId }
   });
 
   return NextResponse.json({ orderId: order.id, productId, quantity });
@@ -39,14 +39,14 @@ export const GET = withBugStack(async (request: NextRequest) => {
     where: status ? { status: status as any } : undefined,
     include: { items: true, customer: true },
     orderBy: { createdAt: 'desc' },
-    take: 50,
+    take: 50
   });
 
   const summary = {
     orders,
     totalRevenue: orders.reduce((sum, order) => sum + order.total, 0),
     averageOrderValue: orders.reduce((sum, order) => sum + order.total, 0) / orders.length,
-    topCustomer: orders.sort((a, b) => b.total - a.total)[0].customer.name,
+    topCustomer: orders.sort((a, b) => b.total - a.total)[0].customer.name
   };
 
   return NextResponse.json(summary);
