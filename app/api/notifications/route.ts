@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withBugStack } from 'bugstack-sdk';
 import '@/lib/bugstack';
-import { db, sendNotification } from '@/lib/db';
+import { db } from '@/lib/db';
+import { notificationQueue } from '@/lib/queue';
 
 export const POST = withBugStack(async (request: NextRequest) => {
   const body = await request.json();
@@ -20,17 +21,7 @@ export const POST = withBugStack(async (request: NextRequest) => {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
   }
 
-  const deliveryResult = sendNotification(user.email, message, channel || 'email');
+  notificationQueue.send({ userId, message, channel });
 
-  const log = await db.notificationLogs.create({
-    data: {
-      userId,
-      message,
-      channel: channel || 'email',
-      deliveredAt: deliveryResult.delivery.timestamp,
-      messageId: deliveryResult.delivery.id
-    }
+  return NextResponse.json({ queued: true });
 });
-
-  return NextResponse.json({ success: true, logId: log.id });
-  });
