@@ -28,6 +28,7 @@ export interface Product {
   description: string;
   price: number;
   inventory: number;
+  stock: number;
   category: Category;
   createdAt: Date;
 }
@@ -115,6 +116,7 @@ const productsTable: Product[] = [
     description: 'Professional-grade widget for enterprise use',
     price: 299.99,
     inventory: 150,
+    stock: 150,
     category: { id: 'cat_widgets', name: 'Widgets' },
     createdAt: new Date('2023-02-01'),
   },
@@ -125,6 +127,7 @@ const productsTable: Product[] = [
     description: 'Reliable widget for everyday use',
     price: 149.99,
     inventory: 500,
+    stock: 500,
     category: { id: 'cat_widgets', name: 'Widgets' },
     createdAt: new Date('2023-03-15'),
   },
@@ -135,6 +138,7 @@ const productsTable: Product[] = [
     description: 'High-speed cable kit with gold connectors',
     price: 49.99,
     inventory: 1000,
+    stock: 1000,
     category: { id: 'cat_accessories', name: 'Accessories' },
     createdAt: new Date('2023-04-10'),
   },
@@ -145,8 +149,20 @@ const productsTable: Product[] = [
     description: 'Experimental multi-spectrum sensor for R&D',
     price: 899.99,
     inventory: 12,
+    stock: 12,
     category: null as unknown as Category, // New product, pending categorization
     createdAt: new Date('2024-01-05'),
+  },
+  {
+    id: 'prod_005',
+    sku: 'LMT-EDT-001',
+    name: 'Limited Edition Sensor',
+    description: 'Limited release run, low stock for launch',
+    price: 1299.99,
+    inventory: 5,
+    stock: 5,
+    category: { id: 'cat_widgets', name: 'Widgets' },
+    createdAt: new Date('2024-01-22'),
   },
 ];
 
@@ -220,6 +236,54 @@ export const db = {
       return productsTable.find(p => p.id === options.where.id) ?? null;
     },
 
+    update: async (options: {
+      where: { id: string };
+      data: { stock?: number | { decrement: number } };
+    }): Promise<Product> => {
+      await simulateLatency();
+      const product = productsTable.find(p => p.id === options.where.id);
+      if (!product) {
+        throw new Error(`Record not found: products with id "${options.where.id}"`);
+      }
+      let nextStock = product.stock;
+      if (typeof options.data.stock === 'number') {
+        nextStock = options.data.stock;
+      } else if (options.data.stock && 'decrement' in options.data.stock) {
+        nextStock = product.stock - options.data.stock.decrement;
+      }
+      if (nextStock < 0) {
+        const err: any = new Error('CheckViolation: stock_must_be_non_negative');
+        err.code = '23514';
+        err.constraint = 'stock_must_be_non_negative';
+        throw err;
+      }
+      product.stock = nextStock;
+      product.inventory = nextStock;
+      return product;
+    },
+
+    updateMany: async (options: {
+      where: { id: string; stock?: { gte: number } };
+      data: { stock: { decrement: number } };
+    }): Promise<{ count: number }> => {
+      await simulateLatency();
+      const product = productsTable.find(p => p.id === options.where.id);
+      if (!product) return { count: 0 };
+      const minStock = options.where.stock?.gte ?? 0;
+      if (product.stock < minStock) return { count: 0 };
+      product.stock -= options.data.stock.decrement;
+      product.inventory = product.stock;
+      return { count: 1 };
+    },
+
+    _resetStock: (id: string, value: number) => {
+      const product = productsTable.find(p => p.id === id);
+      if (product) {
+        product.stock = value;
+        product.inventory = value;
+      }
+    },
+
     findMany: async (options?: {
       take?: number;
       skip?: number;
@@ -270,6 +334,25 @@ export const db = {
   },
 
   orders: {
+    create: async (options: {
+      data: { productId: string; quantity: number; userId: string };
+    }): Promise<{
+      id: string;
+      productId: string;
+      quantity: number;
+      userId: string;
+      createdAt: Date;
+    }> => {
+      await simulateLatency();
+      return {
+        id: `ord_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        productId: options.data.productId,
+        quantity: options.data.quantity,
+        userId: options.data.userId,
+        createdAt: new Date(),
+      };
+    },
+
     findMany: async (options?: {
       where?: Partial<Order>;
       include?: Record<string, boolean>;

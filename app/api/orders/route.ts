@@ -3,6 +3,34 @@ import { withBugStack } from 'bugstack-sdk';
 import '@/lib/bugstack';
 import { db } from '@/lib/db';
 
+export const POST = withBugStack(async (request: NextRequest) => {
+  const body = await request.json();
+  const { productId, quantity, userId } = body;
+
+  if (!productId || !quantity || !userId) {
+    return NextResponse.json(
+      { error: 'productId, quantity, and userId are required' },
+      { status: 400 }
+    );
+  }
+
+  const product = await db.products.findUnique({ where: { id: productId } });
+  if (!product || product.stock < quantity) {
+    return NextResponse.json({ error: 'insufficient_stock' }, { status: 400 });
+  }
+
+  const order = await db.orders.create({
+    data: { productId, quantity, userId },
+  });
+
+  await db.products.update({
+    where: { id: productId },
+    data: { stock: { decrement: quantity } },
+  });
+
+  return NextResponse.json({ orderId: order.id, productId, quantity });
+});
+
 export const GET = withBugStack(async (request: NextRequest) => {
   const { searchParams } = new URL(request.url);
   const status = searchParams.get('status');
