@@ -5,6 +5,18 @@ import { db } from '@/lib/db';
 
 export const GET = withBugStack(async (request: NextRequest) => {
   const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  if (id) {
+    const product = await db.products.findUnique({ where: { id } });
+    return NextResponse.json({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      inStock: product.inventory > 0,
+    });
+  }
+
   const cursor = searchParams.get('cursor');
   const limit = parseInt(searchParams.get('limit') || '20');
 

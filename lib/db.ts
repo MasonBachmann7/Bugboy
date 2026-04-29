@@ -215,6 +215,11 @@ export const db = {
   },
 
   products: {
+    findUnique: async (options: { where: { id: string } }): Promise<Product | null> => {
+      await simulateLatency();
+      return productsTable.find(p => p.id === options.where.id) ?? null;
+    },
+
     findMany: async (options?: {
       take?: number;
       skip?: number;
