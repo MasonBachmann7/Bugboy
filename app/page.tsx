@@ -17,6 +17,7 @@ interface EndpointConfig {
   endpoint: string;
   method: 'GET' | 'POST';
   body?: object;
+  concurrent?: number;
 }
 
 const endpoints: EndpointConfig[] = [
@@ -63,6 +64,51 @@ const endpoints: EndpointConfig[] = [
       pageId: '/',
     },
   },
+  {
+    id: 'admin-metrics',
+    name: 'Admin Metrics',
+    description: 'Reads rolling 24h error/fix counters from Redis',
+    endpoint: '/api/admin/metrics',
+    method: 'GET',
+  },
+  {
+    id: 'user-profile',
+    name: 'Get User Profile',
+    description: 'Fetches a user by id (try usr_7g8h9i — SSO user, profile not synced)',
+    endpoint: '/api/users/usr_7g8h9i',
+    method: 'GET',
+  },
+  {
+    id: 'product-detail',
+    name: 'Get Product Detail',
+    description: 'Fetches a single product by id',
+    endpoint: '/api/products?id=does_not_exist',
+    method: 'GET',
+  },
+  {
+    id: 'reset-fixture',
+    name: 'Reset Order Fixture',
+    description: 'Resets prod_005 stock to 5. Run before the order race.',
+    endpoint: '/api/admin/fixtures/reset',
+    method: 'POST',
+    body: {
+      productId: 'prod_005',
+      stock: 5,
+    },
+  },
+  {
+    id: 'create-order-race',
+    name: 'Create Order (race)',
+    description: 'Fires 10 concurrent POSTs against prod_005 to trigger the race',
+    endpoint: '/api/orders',
+    method: 'POST',
+    body: {
+      productId: 'prod_005',
+      quantity: 5,
+      userId: 'usr_1a2b3c',
+    },
+    concurrent: 10,
+  },
 ];
 
 export default function Dashboard() {
@@ -84,6 +130,33 @@ export default function Dashboard() {
 
       if (config.body) {
         options.body = JSON.stringify(config.body);
+      }
+
+      if (config.concurrent && config.concurrent > 1) {
+        const responses = await Promise.all(
+          Array.from({ length: config.concurrent }, () =>
+            fetch(config.endpoint, options).catch(err => ({
+              status: 0,
+              ok: false,
+              text: () => Promise.resolve(String(err)),
+            }) as unknown as Response)
+          )
+        );
+        const statuses = responses.map(r => r.status);
+        const ok = statuses.filter(s => s >= 200 && s < 300).length;
+        const failed = statuses.filter(s => s >= 500).length;
+        const data: ApiResponse = {
+          concurrent: config.concurrent,
+          ok,
+          failed,
+          statuses,
+          message: failed > 0 ? `${failed}/${config.concurrent} requests hit Internal errors (race fired)` : `${ok}/${config.concurrent} succeeded`,
+        };
+        setResults(prev => ({
+          ...prev,
+          [config.id]: { loading: false, data, error: null },
+        }));
+        return;
       }
 
       const response = await fetch(config.endpoint, options);
