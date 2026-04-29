@@ -1,0 +1,48 @@
+name: Auto-merge ai-fix PRs
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      startsWith(github.event.workflow_run.head_branch, 'ai-fix-')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find PR for branch
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          NUMBER=$(gh pr list \
+            --repo "${{ github.repository }}" \
+            --head "$BRANCH" \
+            --state open \
+            --json number \
+            --jq '.[0].number // empty')
+          if [ -z "$NUMBER" ]; then
+            echo "No open PR for branch $BRANCH; nothing to merge."
+            exit 0
+          fi
+          echo "Found PR #$NUMBER for branch $BRANCH"
+          echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Squash-merge PR
+        if: steps.pr.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge "${{ steps.pr.outputs.number }}" \
+            --repo "${{ github.repository }}" \
+            --squash \
+            --delete-branch \
+            --subject "Auto-deploy: Merge ${{ github.event.workflow_run.head_branch }} into main"
