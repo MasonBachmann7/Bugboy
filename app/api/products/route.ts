@@ -39,7 +39,7 @@ export const GET = withBugStack(async (request: NextRequest) => {
       id: p.id,
       name: p.name,
       price: p.price,
-      category: p.category.name,
+      category: p.category?.name || 'Uncategorized',
       inStock: p.inventory > 0
     })),
     nextCursor,
