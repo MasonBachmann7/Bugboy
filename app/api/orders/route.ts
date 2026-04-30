@@ -19,17 +19,22 @@ export const POST = withBugStack(async (request: NextRequest) => {
     return NextResponse.json({ error: 'insufficient_stock' }, { status: 400 });
   }
 
+  const newStock = product.stock - quantity
+  if (newStock < 0) {
+    return NextResponse.json({ error: 'insufficient_stock' }, { status: 400 })
+  };
+
   await db.products.update({
     where: { id: productId },
-    data: { stock: { decrement: quantity } }
+    data: { stock: newStock }
   });
 
   const order = await db.orders.create({
     data: { productId, quantity, userId }
-  });
+});
 
   return NextResponse.json({ orderId: order.id, productId, quantity });
-});
+  });
 
 export const GET = withBugStack(async (request: NextRequest) => {
   const { searchParams } = new URL(request.url);
@@ -40,18 +45,14 @@ export const GET = withBugStack(async (request: NextRequest) => {
     include: { items: true, customer: true },
     orderBy: { createdAt: 'desc' },
     take: 50
-  });
-
-  const ordersWithTotal = orders.filter(order => order.total !== undefined && order.customer)
-  const totalRevenue = ordersWithTotal.reduce((sum, order) => sum + order.total, 0)
-  const topCustomer = ordersWithTotal.length > 0 ? ordersWithTotal.sort((a, b) => b.total - a.total)[0].customer.name : null
+});
 
   const summary = {
     orders,
-    totalRevenue,
-    averageOrderValue: ordersWithTotal.length > 0 ? totalRevenue / ordersWithTotal.length : 0,
-    topCustomer
-  };
+    totalRevenue: orders.reduce((sum, order) => sum + order.total, 0),
+    averageOrderValue: orders.reduce((sum, order) => sum + order.total, 0) / orders.length,
+    topCustomer: orders.sort((a, b) => b.total - a.total)[0].customer.name
+  }
 
   return NextResponse.json(summary);
-});
+  });
