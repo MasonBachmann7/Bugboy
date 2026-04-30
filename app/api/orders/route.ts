@@ -42,11 +42,15 @@ export const GET = withBugStack(async (request: NextRequest) => {
     take: 50
   });
 
+  const ordersWithTotal = orders.filter(order => order.total !== undefined && order.customer)
+  const totalRevenue = ordersWithTotal.reduce((sum, order) => sum + order.total, 0)
+  const topCustomer = ordersWithTotal.length > 0 ? ordersWithTotal.sort((a, b) => b.total - a.total)[0].customer.name : null
+
   const summary = {
     orders,
-    totalRevenue: orders.reduce((sum, order) => sum + order.total, 0),
-    averageOrderValue: orders.reduce((sum, order) => sum + order.total, 0) / orders.length,
-    topCustomer: orders.sort((a, b) => b.total - a.total)[0].customer.name
+    totalRevenue,
+    averageOrderValue: ordersWithTotal.length > 0 ? totalRevenue / ordersWithTotal.length : 0,
+    topCustomer
   };
 
   return NextResponse.json(summary);
