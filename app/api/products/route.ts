@@ -8,15 +8,12 @@ export const GET = withBugStack(async (request: NextRequest) => {
   const id = searchParams.get('id');
 
   if (id) {
-    const product = await db.products.findUnique({ where: { id } })
-    if (!product) {
-      return NextResponse.json({ error: 'Product not found' }, { status: 404 })
-  }
+    const product = (await db.products.findUnique({ where: { id } }))!;
     return NextResponse.json({
       name: product.name,
       price: product.price,
       inStock: product.inventory > 0,
-      id: product.id
+      id: product.id,
     });
   }
 
@@ -39,7 +36,7 @@ export const GET = withBugStack(async (request: NextRequest) => {
       id: p.id,
       name: p.name,
       price: p.price,
-      category: p.category?.name || 'Uncategorized',
+      category: p.category.name,
       inStock: p.inventory > 0
     })),
     nextCursor,
